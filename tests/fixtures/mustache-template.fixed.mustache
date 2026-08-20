@@ -1,0 +1,8 @@
+<div class="card {{#if isFeatured}}featured{{/if}}">
+  <img src="{{user.avatarUrl}}" alt="">
+  {{#if user.hasEmail}}
+    <label for="user-email-input">Email</label>
+    <input type="email" name="user-email" value="{{user.email}}" id="user-email-input">
+  {{/if}}
+  <button onclick="handleDelete('{{user.id}}')" class="btn-delete" aria-label="Delete" type="button"></button>
+</div>

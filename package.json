@@ -1,0 +1,28 @@
+{
+  "name": "fix11y",
+  "version": "0.1.0",
+  "description": "Zero-dependency developer-focused CLI and automated accessibility remediation engine",
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "fix11y": "./bin/fix11y.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "cli",
+    "remediation",
+    "zero-dependency",
+    "html",
+    "mustache"
+  ],
+  "author": "",
+  "license": "MIT"
+}
