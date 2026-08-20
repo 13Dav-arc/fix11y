@@ -1,101 +1,190 @@
 # fix11y ⚡
 
-> **Zero-dependency, developer-focused CLI and automated accessibility remediation engine.**  
-> Scans HTML5 and template files (Mustache, Handlebars), detects WCAG 2.1/2.2 AA violations, generates unified diffs, and interactively or autonomously applies non-destructive AST patches.
+> **Zero-dependency, developer-focused accessibility remediation engine & interactive Web Studio.**  
+> Scans HTML5 and web templates (Mustache, Handlebars), detects WCAG 2.1/2.2 AA violations, generates unified diffs, and applies surgical, non-destructive AST patches across CLI and Web environments.
+
+[![Build Status](https://img.shields.io/badge/tests-37%2F37%20passing-10B981.svg)](tests/)
+[![Dependencies](https://img.shields.io/badge/core%20dependencies-0-38BDF8.svg)](packages/core/package.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![WCAG](https://img.shields.io/badge/WCAG-2.1%20%2F%202.2%20AA-purple.svg)](https://www.w3.org/WAI/WCAG21/quickref/)
 
 ---
 
-## 🚀 Why fix11y?
+## 🌟 Dual-Interface Architecture
 
-Most automated accessibility tools either **only report** errors (leaving developers to manually fix hundreds of issues) or use heavy AST parsers that **reserialize the entire document** upon fixing.
+`fix11y` operates seamlessly across two distinct developer interfaces:
 
-Reserializing an entire HTML/template document causes critical regressions:
-* 💥 **Corrupts template partials** (auto-injecting `<html><head><body>` wrappers into sub-components).
-* 💥 **Alters formatting** (strips custom indentation, re-quotes attributes, collapses multiline tags).
-* 💥 **Destroys comments & dynamic directives** (`{{#if}}...{{/if}}` split across tags).
-
-### The Fix: CST Offset-Based Surgical Patching
-`fix11y` uses a **Concrete Syntax Tree (CST)** that records exact character offsets (`[startOffset, endOffset]`) for every tag, attribute, comment, and template token. When a violation is remediated, `fix11y` calculates surgical string splices, modifying **only** the violating character ranges while leaving 100% of surrounding whitespace, comments, quotation styles, and line endings untouched.
-
----
-
-## 📦 Zero-Dependency Architecture
-
-`fix11y` has **0 runtime dependencies and 0 dev dependencies** in `package.json`. It runs entirely on native Node.js v20+ LTS standard library modules (`node:fs`, `node:path`, `node:util`, `node:readline`, `node:test`, `node:assert`).
+1. **`@fix11y/core` (Zero-Dependency CLI & CI Gate)**: A high-speed terminal utility and programmatic API built strictly with standard Node.js libraries (0 runtime and 0 dev dependencies).
+2. **`fix11y-studio` (Visual Web Playground)**: An accessible, client-side Next.js web application with drag-and-drop template ingestion, live split-pane editors, interactive Myers diffs, and 1-click batch ZIP export.
 
 ```mermaid
 flowchart TD
-    CLI["CLI Invocation\n(npx fix11y ./src)"] --> Scan["File Scanner / Ingest\n(HTML5 & Mustache)"]
-    Scan --> Lexer["Lossless CST Tokenizer\n(Exact character offsets)"]
-    Lexer --> CST["CST Builder\n(Preserves template directives & partials)"]
-    CST --> Rules["WCAG 2.1/2.2 Rule Evaluator\n(Safe & Review-Flagged)"]
-    Rules --> Patcher["Surgical Range Patcher\n(Non-overlapping offset splicing)"]
-    Patcher --> Diff["Myers Unified Diff Engine\n(ANSI colored diff output)"]
-    Diff --> Modes{"Execution Mode"}
-    Modes -->|"fix11y --fix"| Interactive["Interactive Prompt\n[y / n / all / q] -> Writes to disk"]
-    Modes -->|"fix11y --ci"| CI["CI Gate\nNon-zero exit on unpatched failures"]
+    subgraph fix11y Monorepo
+        subgraph packages/core ["@fix11y/core (0 Dependencies)"]
+            Tokenizer["CST Tokenizer<br/>(HTML5 & Mustache)"]
+            Parser["CST Parser<br/>(Lossless Concrete Tree)"]
+            Registry["WCAG 2.1 AA<br/>Rule Registry"]
+            Patcher["Surgical Range<br/>Offset Patcher"]
+            Myers["Myers Unified<br/>Diff Engine"]
+            CLI["CLI Entry Point<br/>(node:util.parseArgs)"]
+        end
+
+        subgraph apps/studio ["fix11y-studio (Web Playground)"]
+            Next["Next.js App Router & Tailwind"]
+            Hook["useFix11y Client Hook"]
+            Uploader["Drag-and-Drop Ingest"]
+            DiffView["Visual Diff Viewer"]
+            Drawer["WCAG Diagnostics Drawer"]
+            Zip["1-Click Batch ZIP Export"]
+        end
+    end
+
+    CLI --> Tokenizer --> Parser --> Registry --> Patcher --> Myers
+    Hook -->|In-Memory AST Execution| Registry
+    Hook -->|Zero Server Latency| Patcher
+    Next --> Hook
+    Uploader --> Next
+    DiffView --> Next
+    Drawer --> Next
+    Zip --> Next
 ```
 
 ---
 
-## 🎯 Supported Formats
+## 🎯 Why fix11y? (The CST Offset Advantage)
 
-| Format | File Extensions | Support Level |
-| :--- | :--- | :--- |
-| **HTML5** | `.html`, `.htm` | Full native CST support |
-| **Mustache & Handlebars** | `.mustache`, `.hbs`, `.handlebars` | Full template token preservation (`{{...}}`, `{{#...}}`, `{{{...}}}`) |
+Traditional accessibility linters either only report issues without fixing them, or attempt automated fixes by parsing HTML into an Abstract Syntax Tree (AST) and re-serializing the entire document back to string.
+
+**Full document re-serialization introduces severe defects:**
+- ❌ Destroys template partials and dynamic directives (`{{#if}}`, `{{>partial}}`).
+- ❌ Strips HTML comments, DOCTYPE declarations, and conditional blocks.
+- ❌ Rewrites attribute quotation styles (`'` vs `"`).
+- ❌ Collapses intentional indentation and whitespace formatting.
+
+### The fix11y Surgical Patching Solution
+
+`fix11y` parses documents into a **Concrete Syntax Tree (CST)** that records exact character start and end indices (`startOffset`, `endOffset`) for every tag, attribute, and text node.
+
+When remediating violations, `fix11y` applies **surgical string replacements directly to targeted character offset spans**, leaving **100% of surrounding whitespace, comments, quotation styles, and template tags intact**.
 
 ---
 
-## 🛠️ CLI Usage
+## 🚀 CLI Quick Start (`@fix11y/core`)
+
+Run `fix11y` instantly in any project without installing dependencies:
 
 ```bash
-# Scan a directory or file (Dry-run summary)
-npx fix11y ./src
+# Audit a single file (dry-run mode)
+npx @fix11y/core index.html
 
-# Scan and interactively apply fixes with unified diff approval
-npx fix11y ./src --fix
+# Audit an entire directory recursively (.html, .mustache, .hbs)
+npx @fix11y/core ./src
 
-# Run as a CI quality gate (exit code 1 on violations, 0 on clean)
-npx fix11y ./src --ci
+# Interactively review and apply patches
+npx @fix11y/core ./templates --fix
 
-# Output diagnostics as JSON for tooling integration
-npx fix11y ./src --json
+# Non-interactive batch fix (auto-accept all patches)
+npx @fix11y/core ./src --fix -y
+
+# CI/CD Pipeline Gate (exits with code 1 on unpatched violations, 0 if clean)
+npx @fix11y/core ./src --ci
+
+# Output structured JSON diagnostic payload
+npx @fix11y/core ./src --json
 ```
 
-### Interactive Prompt Controls
-When running with `--fix`, `fix11y` presents colorized unified diffs and prompts:
-* `y`: Apply this patch to the file.
-* `n`: Skip this patch.
-* `a`: Apply all remaining patches across all files.
-* `q`: Abort and quit immediately.
+### CLI Command-Line Flags
+
+| Flag | Shorthand | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `--fix` | `-f` | Interactively prompt `[y/n/all/q]` to apply patches to disk | `false` |
+| `--yes` | `-y` | Auto-accept all recommended patches without interactive prompt | `false` |
+| `--ci` | | Non-zero exit code (1) if unpatched violations exist | `false` |
+| `--safety` | `-s` | Filter rules by confidence tier: `safe` or `all` | `all` |
+| `--json` | | Output parseable JSON diagnostic report to stdout | `false` |
+| `--help` | `-h` | Display help screen and command options | |
+| `--version` | `-v` | Display engine version | |
 
 ---
 
-## 📋 WCAG 2.1 AA Rules & Safety Confidence Tiers
+## 🎨 Web Studio (`fix11y-studio`)
 
-Remediations in `fix11y` are categorized into **Confidence Classes** to ensure safe automated execution:
+The Web Playground provides a visual workbench for accessibility inspection and batch remediation:
 
-| Rule ID | WCAG Success Criteria | Description | Safety Tier | Auto-Fix Strategy |
+* **⚡ Pure Client-Side Execution**: Runs `@fix11y/core` directly in browser memory via WebAssembly/ESM with zero server roundtrips, zero latency, and zero telemetry.
+* **📂 Batch Drag-and-Drop Ingestion**: Drop single or dozens of `.html`, `.mustache`, and `.hbs` files at once.
+* **🔍 Interactive Visual Diff Viewer**: Side-by-side split editor with synchronized line numbers and line-level colored additions/deletions.
+* **📋 WCAG Diagnostics Drawer**: Rule breakdown cards with direct links to W3C specifications and click-to-jump line focus.
+* **📦 1-Click ZIP Export**: Download the entire batch of remediated templates in a single ZIP file.
+* **♿ Built-in Accessibility Dogfooding**: Studio interface satisfies WCAG 2.2 AA with semantic landmarks, high-contrast visual tokens, visible focus rings, and an `aria-live="polite"` screen-reader status announcer.
+
+### Launching the Studio Locally
+
+```bash
+# Run the studio development server
+npm run dev --workspace=fix11y-studio
+
+# Build a standalone static export (out/)
+npm run build --workspace=fix11y-studio
+```
+
+---
+
+## 🛡️ WCAG 2.1 / 2.2 AA Rule Registry
+
+| Rule ID | WCAG Criteria | Severity | Safety Tier | Automated Surgical Remediation |
 | :--- | :--- | :--- | :--- | :--- |
-| **`rule-form-labels`** | 1.3.1 Info & Relationships, 4.1.2 Name, Role, Value | Unassociated `<input>`, `<select>`, `<textarea>` | 🟢 **Safe** | Injects deterministic `id` and creates `<label for="...">` or adds `aria-label` |
-| **`rule-image-alt`** | 1.1.1 Non-text Content | Missing `alt` attribute on `<img>` or `<area>` | 🟢 **Safe** | Injects contextual `alt=""` for decorative/button icons or placeholder review note |
-| **`rule-aria-live`** | 4.1.3 Status Messages | Search/alert feedback containers missing live region | 🟢 **Safe** | Injects `aria-live="polite"` and `role="status"` |
-| **`rule-semantic-buttons`** | 4.1.2 Name, Role, Value, 2.1.1 Keyboard | `<div onclick="...">` or `<a>` without `href` | 🟡 **Review-Advised** | Swaps tag to `<button type="button">`, preserving attributes & handlers |
-| **`rule-landmarks`** | 1.3.1 Info & Relationships | Page missing `<header>`, `<main>`, or `<footer>` | 🟡 **Review-Advised** | Flags missing landmarks; suggests structural wraps without breaking layout |
+| **`img-alt`** | [1.1.1 Non-text Content (Level A)](https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html) | Error | `Safe` | Injects contextual `alt=""` for decorative/embedded assets or transfers existing `title` values into valid `alt` attributes. |
+| **`form-label`** | [1.3.1 Info & Relationships](https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html)<br/>[4.1.2 Name, Role, Value](https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html) | Error | `Safe` | Generates deterministic ID pairings (`<label for="id">` + `<input id="id">`) or injects `aria-label` when labels are unlinked. |
+| **`button-semantics`** | [2.1.1 Keyboard (Level A)](https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html)<br/>[4.1.2 Name, Role, Value](https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html) | Error | `Safe` / `Caution` | Converts clickable `div[onclick]` / `span[onclick]` into semantic `<button type="button">`, and injects accessible names on icon buttons. |
+| **`aria-live-status`** | [4.1.3 Status Messages (Level AA)](https://www.w3.org/WAI/WCAG21/Understanding/status-messages.html) | Warning | `Safe` | Automatically attaches `aria-live="polite"` and `role="status"` to dynamic alert, search feedback, and live message containers. |
 
 ---
 
-## 🧪 Testing
+## 📦 Monorepo Directory Structure
 
-Run the test suite using Node.js's native test runner:
+```text
+fix11y/
+├── packages/
+│   └── core/                 # Zero-dependency remediation engine (@fix11y/core)
+│       ├── bin/
+│       │   └── fix11y.js     # Standalone CLI binary (parseArgs, ANSI diffs, readline)
+│       ├── src/
+│       │   ├── index.js      # Public programmatic API
+│       │   ├── parser/       # Character-offset Tokenizer, CST builder & Surgical patcher
+│       │   ├── rules/        # WCAG 2.1 AA rule registry & mutators
+│       │   └── ui/           # Pure JS Myers diff algorithm & terminal reporters
+│       ├── tests/            # 37/37 native Node.js test suite & raw fixtures
+│       └── package.json      # name: "@fix11y/core" (0 dependencies)
+├── apps/
+│   └── studio/               # Web Playground & Visual Remediation Studio
+│       ├── src/
+│       │   ├── app/          # Next.js App Router (page.jsx, layout.jsx, globals.css)
+│       │   ├── components/   # EditorPane, DiffViewer, DiagnosticList, FileUploader, Toolbar
+│       │   └── hooks/        # useFix11y client-side engine hook
+│       ├── package.json      # Next.js, React, Tailwind CSS, JSZip
+│       └── next.config.mjs   # transpilePackages: ['@fix11y/core'], output: 'export'
+├── GEMINI.md                 # Monorepo governance & operating invariants
+├── README.md                 # Documentation & Architecture guide
+└── package.json              # Monorepo workspaces root
+```
+
+---
+
+## 🧪 Testing & Verification
+
+Run the full native test suite across the monorepo:
 
 ```bash
+# Run all tests across workspaces
 npm test
+
+# Run core engine tests specifically
+npm test --workspace=@fix11y/core
 ```
 
 ---
 
 ## 📄 License
 
-MIT License. Designed with zero dependencies for maximum speed, security, and stability.
+MIT © 2026 [13Dav-arc](https://github.com/13Dav-arc)

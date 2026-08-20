@@ -26,8 +26,11 @@ const ANSI = {
  */
 export function shouldUseColor(explicit) {
   if (explicit !== undefined) return Boolean(explicit);
-  if (process.env.NO_COLOR) return false;
-  return Boolean(process.stdout.isTTY);
+  if (typeof process !== 'undefined') {
+    if (process.env?.NO_COLOR) return false;
+    return Boolean(process.stdout?.isTTY);
+  }
+  return false;
 }
 
 /**

@@ -1,28 +1,19 @@
 {
-  "name": "fix11y",
+  "name": "fix11y-monorepo",
   "version": "0.1.0",
-  "description": "Zero-dependency developer-focused CLI and automated accessibility remediation engine",
+  "private": true,
   "type": "module",
-  "main": "./src/index.js",
-  "bin": {
-    "fix11y": "./bin/fix11y.js"
-  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "npm test --workspaces --if-present",
+    "test:core": "npm test --workspace=@fix11y/core"
   },
   "engines": {
     "node": ">=20.0.0"
   },
-  "keywords": [
-    "accessibility",
-    "a11y",
-    "wcag",
-    "cli",
-    "remediation",
-    "zero-dependency",
-    "html",
-    "mustache"
-  ],
   "author": "",
   "license": "MIT"
 }

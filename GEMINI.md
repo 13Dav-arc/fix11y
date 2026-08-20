@@ -1,82 +1,68 @@
 # fix11y — Agent Governance & Operating Invariants
 
-`fix11y` is a zero-dependency, developer-focused CLI and automated remediation engine. It scans HTML and web template files (HTML5, Mustache, Handlebars), detects WCAG 2.1/2.2 AA accessibility violations, generates unified diffs, and interactively or autonomously applies non-destructive AST patches.
+`fix11y` is a zero-dependency, developer-focused accessibility remediation engine and interactive web playground. It scans HTML and web template files (HTML5, Mustache, Handlebars), detects WCAG 2.1/2.2 AA violations, generates unified diffs, and interactively or autonomously applies non-destructive AST patches across CLI and Web Studio environments.
 
 ---
 
 ## 1. Core Operating Invariants
 
-### Invariant 1: Strict Zero-Dependency Policy
-* **Zero npm packages**: The project must strictly have **0 runtime and 0 dev dependencies** in `package.json`.
-* **Standard Library Only**: All functionality must rely entirely on Node.js v20+ LTS native modules:
-  - `node:fs` / `node:fs/promises` (File discovery & I/O)
-  - `node:path` (Cross-platform path resolution)
-  - `node:util` (`parseArgs` for zero-dependency CLI arguments)
-  - `node:readline` / `node:readline/promises` (Interactive TTY prompts)
-  - `node:test` & `node:assert` (Unit & E2E testing framework)
-  - `node:process` & ANSI escape codes (Terminal styling & exit codes)
+### Invariant 1: Strict Zero-Dependency Policy for `@fix11y/core`
+* **Zero npm packages in Core**: The engine package (`packages/core`) must strictly have **0 runtime and 0 dev dependencies** in its `package.json`.
+* **Standard Library Only**: All core functionality relies entirely on Node.js v20+ LTS native modules (`node:fs`, `node:path`, `node:util`, `node:readline`, `node:test`, `node:assert`, `node:process`).
 
 ### Invariant 2: Offset-Based Surgical Patching (CST Model)
 * **No Full-Document Reserialization**: Never parse to an AST and serialize the entire document back to string. Full serialization corrupts partial templates, strips comments, alters quotation styles, and collapses whitespace.
-* **Character Offset Spans**: Every parsed token, element, attribute, and text node must maintain exact character start and end indices (`startOffset`, `endOffset`, `loc: { start: { line, column }, end: { line, column } }`).
-* **Surgical Splice & Patch**: Remediations apply string replacements exclusively at targeted character offsets, preserving 100% of all untouched bytes, formatting, and surrounding context.
+* **Character Offset Spans**: Every parsed token, element, attribute, and text node maintains exact character start and end indices (`startOffset`, `endOffset`, `loc: { start: { line, column }, end: { line, column } }`).
+* **Surgical Splice & Patch**: Remediations apply string replacements exclusively at targeted character offsets, preserving 100% of untouched bytes, formatting, and surrounding context.
 
 ### Invariant 3: Template-Safe Tokenization
-* **Template Syntax Preservation**: `{{...}}`, `{{{...}}}`, `{{#...}}`, `{{/...}}`, `{{^...}}`, and `{{>...}}` tags must be parsed losslessly without corrupting tag hierarchies, attribute lists, or raw text.
-* **Scope**: Target HTML5 and Mustache / Handlebars templates. JSX / TSX is deferred to future major versions requiring a dedicated JavaScript/TypeScript tokenizer.
+* **Template Syntax Preservation**: `{{...}}`, `{{{...}}}`, `{{#...}}`, `{{/...}}`, `{{^...}}`, and `{{>...}}` tags are parsed losslessly without corrupting tag hierarchies, attribute lists, or raw text.
+* **Scope**: Target HTML5 and Mustache / Handlebars templates. JSX / TSX is deferred to future major versions.
 
-### Invariant 4: Remediation Safety & Confidence Classes
-* **Safe / Auto-Patchable**:
-  - `rule-image-alt`: Injects missing `alt=""` or contextual `alt` attribute.
-  - `rule-form-labels`: Deterministic `id` generation and `<label for="...">` pairing or `aria-label` injection.
-  - `rule-aria-live`: Dynamic/search feedback regions lacking `aria-live="polite"`.
-* **Review-Advised / Caution**:
-  - `rule-semantic-buttons`: Non-semantic interactive element fixes (`<div onclick="...">` -> `<button type="button">`), requiring explicit user review to avoid CSS class or event propagation regressions.
-  - `rule-landmarks`: Top-level landmark recommendations (`<header>`, `<main>`, `<footer>`), flagged for review to prevent layout breaking in CSS Grid/Flexbox contexts.
+### Invariant 4: Browser Environment Isolation
+* **Universal Execution**: The core programmatic API (`@fix11y/core`) must run identically in Node.js (CLI) and browser runtimes (Next.js / Web Studio).
+* **Safe Guards**: Core modules must never assume `process.stdout` or Node-only globals exist without safe guards (`typeof process !== 'undefined'`).
+
+### Invariant 5: Dogfooding Accessibility in `apps/studio`
+* **WCAG 2.2 AA Compliance**: All UI apps in the monorepo must strictly adhere to accessibility standards:
+  - Accessible landmarks (`<header>`, `<main>`, `<nav>`, `<aside>`, `<output>`).
+  - Active `aria-live="polite"` live status announcer for asynchronous scan results.
+  - High-contrast visual tokens (minimum 4.5:1 text contrast) and visible focus rings.
 
 ---
 
-## 2. Directory & Module Architecture
+## 2. Monorepo Directory Architecture
 
 ```text
 fix11y/
-├── bin/
-│   └── fix11y.js             # Executable CLI entry point (parseArgs, exit codes)
-├── src/
-│   ├── index.js              # Core programmatic API (scan, lint, fix, diff)
-│   ├── parser/
-│   │   ├── tokenizer.js      # Zero-dep HTML5/Mustache lexer with character offsets
-│   │   ├── parser.js         # Concrete Syntax Tree (CST) builder
-│   │   └── patcher.js        # Offset-based surgical string replacer / splice engine
-│   ├── rules/
-│   │   ├── base-rule.js      # Base rule contract (meta, evaluate, fix)
-│   │   ├── rule-form-labels.js     # Missing label / input association
-│   │   ├── rule-semantic-buttons.js # Div/anchor button semantics
-│   │   ├── rule-image-alt.js       # Missing image alt attributes
-│   │   ├── rule-landmarks.js       # Landmark structural checks
-│   │   └── index.js          # Rule registry & evaluator
-│   ├── diff/
-│   │   ├── myers.js          # Zero-dependency Myers diff algorithm
-│   │   └── formatter.js      # ANSI unified diff formatter (@@ -l,s +l,s @@)
-│   └── ui/
-│       ├── prompt.js         # Interactive CLI prompt (y/n/all/q)
-│       └── reporter.js       # CI / table / JSON error reporter
-├── tests/
-│   ├── fixtures/             # Raw vs. expected templates and HTML fixtures
-│   ├── tokenizer.test.js     # Tokenizer offset accuracy & template tag tests
-│   ├── parser.test.js        # CST hierarchy & location tracking tests
-│   ├── patcher.test.js       # Surgical string splicing tests
-│   ├── rules.test.js         # Unit tests for WCAG rule evaluation & mutators
-│   ├── diff.test.js          # Unified diff algorithm tests
-│   └── cli.test.js           # E2E CLI tests (--fix, --ci, dry-run)
-├── GEMINI.md                 # Operating invariants & governance
-└── package.json              # Project manifest (0 dependencies)
+├── packages/
+│   └── core/                 # Zero-dependency remediation engine (@fix11y/core)
+│       ├── bin/
+│       │   └── fix11y.js     # Executable CLI entry point (parseArgs, exit codes)
+│       ├── src/
+│       │   ├── index.js      # Programmatic Public API
+│       │   ├── parser/       # Tokenizer, CST builder, surgical patcher
+│       │   ├── rules/        # WCAG 2.1 AA rule registry & evaluators
+│       │   └── ui/           # Myers diff algorithm & terminal reporters
+│       ├── tests/            # 37/37 native Node test suite & fixtures
+│       └── package.json      # name: "@fix11y/core" (0 dependencies)
+├── apps/
+│   └── studio/               # Web Playground & Visual Remediation Studio
+│       ├── src/
+│       │   ├── app/          # Next.js App Router (page, layout, globals.css)
+│       │   ├── components/   # Split Editor, Diff Viewer, Diagnostic Drawer
+│       │   └── hooks/        # useFix11y client-side engine hook
+│       ├── package.json      # Next.js, React, Tailwind CSS
+│       └── next.config.mjs   # transpilePackages: ['@fix11y/core']
+├── GEMINI.md                 # Monorepo governance & operating invariants
+├── README.md                 # CLI & Web Studio documentation
+└── package.json              # Monorepo workspaces root
 ```
 
 ---
 
 ## 3. Development & Testing Standards
 
-* **Test Runner**: Run all tests via `npm test` (`node --test tests/*.test.js`).
-* **Cross-Platform Compatibility**: Diffs and character offsets must handle both `LF` and `CRLF` newlines seamlessly.
-* **Deterministic Output**: Remediation mutations and diff outputs must be 100% deterministic (no random UUIDs; use stable naming algorithms derived from element tag, name, or source position).
+* **Test Runner**: Run all tests across workspaces via `npm test` (`npm test --workspaces --if-present`).
+* **Cross-Platform Compatibility**: Diffs and character offsets handle both `LF` and `CRLF` newlines seamlessly.
+* **Deterministic Output**: Remediation mutations and diff outputs are 100% deterministic (stable IDs derived from element tag, name, or source index).
