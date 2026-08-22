@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, Zap, Github, Terminal, Layers, Sparkles } from 'lucide-react';
+import { Lock, Zap, Github, Terminal } from 'lucide-react';
 import { useFix11y } from '../hooks/useFix11y.js';
 import { Toolbar } from '../components/Toolbar.jsx';
 import { FileUploader } from '../components/FileUploader.jsx';
@@ -62,15 +62,15 @@ export default function StudioPage() {
               </h1>
               <span className="text-[11px] font-mono text-muted bg-canvas px-2 py-0.5 rounded border border-border">v0.1.0</span>
             </div>
-            <p className="text-xs text-muted">Zero-dependency automated WCAG 2.1 AA accessibility remediation engine</p>
+            <p className="text-xs text-muted">Instant, automated accessibility remediation for your web pages & templates.</p>
           </div>
         </div>
 
         {/* Header Badges & Links */}
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-addition/10 border border-addition-border text-addition text-xs font-semibold">
-            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-            Pure Client-Side AST Engine
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-addition/10 border border-addition-border text-addition text-xs font-semibold">
+            <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>100% Private • Runs in your browser</span>
           </div>
 
           <a

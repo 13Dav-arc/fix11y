@@ -7,37 +7,66 @@ import {
   ShieldAlert,
   ArrowRight,
   CheckCircle2,
-  Filter,
-  ExternalLink,
-  Tag
+  ExternalLink
 } from 'lucide-react';
 
 const WCAG_METADATA = {
-  'img-alt': {
-    name: 'Images Must Have Alt Text',
-    wcag: 'WCAG 1.1.1 (Level A)',
-    principle: 'Perceivable',
-    url: 'https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html'
-  },
   'form-label': {
-    name: 'Form Controls Must Have Labels',
-    wcag: 'WCAG 1.3.1 & 4.1.2 (Level A)',
+    title: 'Form Input Missing Label',
+    wcag: 'WCAG 1.3.1 & 4.1.2',
     principle: 'Perceivable & Robust',
     url: 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html'
   },
+  'img-alt': {
+    title: 'Image Missing Description',
+    wcag: 'WCAG 1.1.1',
+    principle: 'Perceivable',
+    url: 'https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html'
+  },
   'button-semantics': {
-    name: 'Buttons Require Semantic Names & Roles',
-    wcag: 'WCAG 2.1.1 & 4.1.2 (Level A)',
+    title: 'Non-Semantic Clickable Element',
+    wcag: 'WCAG 2.1.1 & 4.1.2',
     principle: 'Operable & Robust',
     url: 'https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html'
   },
   'aria-live-status': {
-    name: 'Dynamic Status & Alert Regions Require aria-live',
-    wcag: 'WCAG 4.1.3 (Level AA)',
+    title: 'Live Region Missing Status Alert',
+    wcag: 'WCAG 4.1.3',
     principle: 'Robust',
     url: 'https://www.w3.org/WAI/WCAG21/Understanding/status-messages.html'
   }
 };
+
+/**
+ * Renders technical diagnostic messages with highlighted inline HTML/attribute tags.
+ */
+function renderStyledMessage(message) {
+  if (!message || typeof message !== 'string') return message;
+
+  // Regex matches <tag>, attribute="val", attribute='val', or specific code keywords
+  const parts = message.split(/(<[^>]+>|[a-zA-Z-]+="[^"]*"|[a-zA-Z-]+='[^']*'|\b(?:aria-label|aria-live|role|alt|id|for|onclick|type)\b)/g);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+    const isTagOrAttr =
+      part.startsWith('<') ||
+      part.includes('="') ||
+      part.includes("='") ||
+      ['aria-label', 'aria-live', 'role', 'alt', 'id', 'for', 'onclick', 'type'].includes(part);
+
+    if (isTagOrAttr) {
+      return (
+        <code
+          key={index}
+          className="font-mono text-accent bg-canvas/90 px-1 py-0.5 rounded border border-border/60 text-[11px] font-semibold mx-0.5"
+        >
+          {part}
+        </code>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
 
 export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
   const [filter, setFilter] = useState('all'); // 'all' | 'safe' | 'caution'
@@ -57,14 +86,14 @@ export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-canvas/80 border-b border-border text-xs">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-caution" aria-hidden="true" />
-          <h2 className="font-bold text-slate-200 text-sm">WCAG Diagnostics & Remediation Rules</h2>
+          <h2 className="font-bold text-slate-200 text-sm">WCAG Accessibility Diagnostics</h2>
           <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-canvas text-accent border border-border">
             {diagnostics.length} issue{diagnostics.length === 1 ? '' : 's'}
           </span>
         </div>
 
         {/* Filter Controls */}
-        <div role="group" aria-label="Filter diagnostics" className="flex items-center gap-1 bg-canvas p-0.5 rounded-lg border border-border">
+        <div role="group" aria-label="Filter diagnostics by safety level" className="flex items-center gap-1 bg-canvas p-0.5 rounded-lg border border-border">
           <button
             onClick={() => setFilter('all')}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
@@ -106,7 +135,7 @@ export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
       {/* Issues List Container */}
       <div
         tabIndex={0}
-        aria-label="WCAG Violations List"
+        aria-label="Accessibility Violations List"
         className="divide-y divide-border/60 max-h-[380px] overflow-auto p-2 space-y-2 bg-canvas/30"
       >
         {filteredDiagnostics.length === 0 ? (
@@ -114,19 +143,19 @@ export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
             <CheckCircle2 className="w-8 h-8 text-addition mb-2" aria-hidden="true" />
             <p className="text-sm font-semibold text-slate-200">
               {diagnostics.length === 0
-                ? 'No WCAG Violations Detected'
+                ? 'All Clear! No Accessibility Violations Detected'
                 : 'No issues match the selected safety filter'}
             </p>
             <p className="text-xs text-muted mt-1">
               {diagnostics.length === 0
                 ? 'Your markup satisfies the evaluated WCAG 2.1 AA success criteria.'
-                : 'Switch filters to inspect other diagnostic categories.'}
+                : 'Switch filters above to inspect other diagnostic categories.'}
             </p>
           </div>
         ) : (
           filteredDiagnostics.map((diag, index) => {
             const meta = WCAG_METADATA[diag.ruleId] || {
-              name: diag.ruleId,
+              title: diag.ruleId,
               wcag: 'WCAG 2.1 AA',
               principle: 'Accessibility',
               url: 'https://www.w3.org/WAI/WCAG21/quickref/'
@@ -139,18 +168,21 @@ export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
                 key={index}
                 className="p-3.5 rounded-lg border border-border bg-card hover:border-accent/40 hover:bg-cardHover transition-all flex flex-col gap-2"
               >
-                {/* Header Row */}
+                {/* Header Row: Humanized Title + Code Tag + WCAG Spec Link */}
                 <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-100 px-2 py-0.5 bg-canvas rounded border border-border text-[11px]">
-                      {diag.ruleId}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-slate-100 text-xs">
+                      {meta.title}
+                    </h3>
+                    <span className="font-mono text-slate-400 px-1.5 py-0.5 bg-canvas rounded border border-border text-[10px]">
+                      [{diag.ruleId}]
                     </span>
                     <a
                       href={meta.url}
                       target="_blank"
                       rel="noreferrer"
                       className="text-muted hover:text-accent flex items-center gap-1 text-[11px] underline underline-offset-2"
-                      title={`View ${meta.wcag} documentation`}
+                      title={`View ${meta.wcag} documentation on W3C`}
                     >
                       {meta.wcag}
                       <ExternalLink className="w-3 h-3" />
@@ -179,15 +211,15 @@ export function DiagnosticList({ diagnostics = [], onJumpToLine }) {
                   </span>
                 </div>
 
-                {/* Message */}
-                <p className="text-xs text-slate-200 leading-relaxed font-medium">
-                  {diag.message}
+                {/* Technical Explanation with Formatted Code Badges */}
+                <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                  {renderStyledMessage(diag.message)}
                 </p>
 
                 {/* Location & Jump Button */}
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px] text-muted">
                   <span className="font-mono text-slate-400">
-                    Location: Line {diag.line || 1}, Col {diag.column || 1}
+                    Line {diag.line || 1}, Column {diag.column || 1}
                   </span>
 
                   {onJumpToLine && diag.line && (

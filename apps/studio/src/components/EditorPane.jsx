@@ -40,13 +40,13 @@ export function EditorPane({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
-      {/* Left Pane: Raw Source Input */}
+      {/* Left Pane: Original Code Input */}
       <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-lg">
         {/* Pane Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-canvas/80 border-b border-border text-xs">
           <div className="flex items-center gap-2 font-semibold text-slate-200">
             <Code2 className="w-4 h-4 text-accent" aria-hidden="true" />
-            Raw Source Markup
+            Original Code
           </div>
           <div className="flex items-center gap-3 text-muted">
             {isEvaluating && (
@@ -87,13 +87,13 @@ export function EditorPane({
             onChange={(e) => setRawCode(e.target.value)}
             placeholder="<!-- Paste your HTML5 or Mustache code here -->"
             className="flex-1 p-3 bg-transparent text-slate-100 placeholder-slate-600 resize-none outline-none leading-6 font-mono overflow-auto whitespace-pre"
-            aria-label="Raw HTML or Mustache markup input"
+            aria-label="Original HTML or Mustache markup input"
             spellCheck="false"
           />
         </div>
       </div>
 
-      {/* Right Pane: Live Remediated / Diff Output */}
+      {/* Right Pane: Fixed & Accessible Code / Diff Output */}
       <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-lg">
         {/* Pane Header & Tab Switcher */}
         <div className="flex items-center justify-between px-4 py-2 bg-canvas/80 border-b border-border text-xs">
@@ -114,7 +114,7 @@ export function EditorPane({
               }`}
             >
               <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" />
-              Remediated Markup
+              Fixed & Accessible Code
             </button>
             <button
               role="tab"
@@ -164,10 +164,10 @@ export function EditorPane({
               {/* Remediated Code Pre */}
               <pre
                 tabIndex={0}
-                aria-label="Remediated accessible code output"
+                aria-label="Fixed accessible code output"
                 className="flex-1 p-3 text-slate-100 leading-6 overflow-auto font-mono whitespace-pre outline-none"
               >
-                <code>{fixedCode || '<!-- No markup to remediate -->'}</code>
+                <code>{fixedCode || '<!-- No code to remediate -->'}</code>
               </pre>
             </div>
           ) : (

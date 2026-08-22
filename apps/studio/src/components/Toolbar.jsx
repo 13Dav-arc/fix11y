@@ -118,7 +118,7 @@ export function Toolbar({
                 ? 'bg-addition/20 border-addition text-addition'
                 : 'bg-canvas border-border hover:border-accent/60 text-slate-200 hover:text-white'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
-            aria-label={copied ? 'Markup copied to clipboard' : 'Copy remediated markup to clipboard'}
+            aria-label={copied ? 'Fixed code copied to clipboard' : 'Copy fixed accessible code to clipboard'}
           >
             {copied ? (
               <>
@@ -128,7 +128,7 @@ export function Toolbar({
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                Copy Markup
+                Copy Fixed Code
               </>
             )}
           </button>
@@ -141,18 +141,18 @@ export function Toolbar({
             aria-label="Download active remediated file"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Export File</span>
+            <span className="hidden sm:inline">Download Fixed File</span>
           </button>
 
           {/* ZIP Batch Export (Highlighted when multiple files) */}
           <button
             onClick={onExportZip}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-accent hover:bg-accent-hover text-canvas border border-accent transition-all shadow-sm"
-            title="Export all files as a ZIP archive"
-            aria-label="Export all files as a ZIP archive"
+            title="Download all remediated files as a ZIP archive"
+            aria-label="Download all remediated files as a ZIP archive"
           >
             <Archive className="w-3.5 h-3.5" />
-            <span>Download ZIP ({files.length})</span>
+            <span>Download All as ZIP ({files.length})</span>
           </button>
 
           {/* Reset Button */}
@@ -175,7 +175,7 @@ export function Toolbar({
       >
         <span className="text-muted text-xs font-mono pr-2 flex items-center gap-1">
           <FileText className="w-3.5 h-3.5 text-accent" />
-          Files:
+          Open Files:
         </span>
         {files.map((file) => {
           const isSelected = file.id === activeFileId;

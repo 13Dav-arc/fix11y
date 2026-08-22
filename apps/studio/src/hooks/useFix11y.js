@@ -173,10 +173,10 @@ export function useFix11y(initialPreset = 'broken-form') {
     if (!activeFile) return;
     const total = activeFile.diagnostics.length;
     if (total === 0) {
-      setAnnouncement(`Audit complete for ${activeFile.name}: markup is 100% WCAG compliant.`);
+      setAnnouncement(`Audit complete for ${activeFile.name}: markup is 100% accessible.`);
     } else {
       setAnnouncement(
-        `Audit complete for ${activeFile.name}: ${total} violations found (${activeFile.stats.safeCount} safe, ${activeFile.stats.cautionCount} review-advised).`
+        `Audit complete for ${activeFile.name}: ${total} accessibility fixes available (${activeFile.stats.safeCount} safe, ${activeFile.stats.cautionCount} review-advised).`
       );
     }
   }, [activeFile?.diagnostics?.length, activeFile?.name, activeFile?.stats]);
