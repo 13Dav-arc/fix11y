@@ -1,7 +1,7 @@
 import './globals.css';
 
-const siteUrl = 'https://fix1ly.vercel.app/';
-const ogImageUrl = 'https://fix1ly.vercel.app/og-image.png';
+const siteUrl = 'https://fix11y.vercel.app/';
+const ogImageUrl = 'https://fix11y.vercel.app/og-image.png';
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
