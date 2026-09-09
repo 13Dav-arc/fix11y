@@ -1,7 +1,7 @@
 import './globals.css';
 
-const siteUrl = 'https://13dav-arc.github.io/fix11y/';
-const ogImageUrl = 'https://13dav-arc.github.io/fix11y/og-image.png';
+const siteUrl = 'https://fix1ly.vercel.app/';
+const ogImageUrl = 'https://fix1ly.vercel.app/og-image.png';
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
@@ -27,6 +27,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
+    url: siteUrl,
     title: 'fix11y Studio — Visual Accessibility Remediation Engine',
     description:
       'Instant, automated WCAG 2.1/2.2 AA accessibility fixes for HTML5 and Mustache templates. 100% private, runs client-side in your browser.',
