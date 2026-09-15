@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "build": "tsc",
     "pretest": "tsc",
-    "start:worker": "node dist/worker.js",
-    "worker": "node dist/worker.js",
+    "start:worker": "node dist/src/worker.js",
+    "worker": "node dist/src/worker.js",
     "test": "node --test dist/**/*.test.js"
   },
   "dependencies": {
