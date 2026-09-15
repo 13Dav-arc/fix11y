@@ -13,7 +13,7 @@
     "test:core": "npm test --workspace=@fix11y/core"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.5.0"
   },
   "author": "",
   "license": "MIT"
