@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import dotenv from 'dotenv';
 import { Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -113,6 +114,71 @@ export function createRemediationWorker(
 }
 
 /**
+ * Creates and starts a lightweight HTTP health check server for Render Web Service port binding.
+ */
+export function createHealthCheckServer(
+  port: number = Number(process.env.PORT) || 10000,
+  logger: AccessibleLogger = new AccessibleLogger()
+): http.Server {
+  const server = http.createServer((req, res) => {
+    const url = req.url?.split('?')[0];
+    if (req.method === 'GET' && (url === '/' || url === '/health')) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          status: 'ok',
+          uptime: process.uptime(),
+          timestamp: new Date().toISOString(),
+        })
+      );
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not Found' }));
+  });
+
+  server.listen(port, '0.0.0.0', () => {
+    logger.log('info', `Health check server listening on port ${port}`);
+  });
+
+  return server;
+}
+
+/**
+ * Sets up a non-blocking keep-alive ping to prevent idle spin-down on Render free tier.
+ */
+export function setupKeepAlive(
+  externalUrl?: string,
+  logger: AccessibleLogger = new AccessibleLogger(),
+  intervalMs: number = 13 * 60 * 1000 // 13 minutes (780,000 ms)
+): NodeJS.Timeout | undefined {
+  const targetUrl = externalUrl || process.env.RENDER_EXTERNAL_URL;
+  if (!targetUrl) return undefined;
+
+  const pingUrl = `${targetUrl.replace(/\/$/, '')}/health`;
+  logger.log('info', `Configuring keep-alive self-ping for ${pingUrl} every ${intervalMs / 60000} minutes`);
+
+  const timer = setInterval(async () => {
+    try {
+      const res = await fetch(pingUrl, {
+        headers: { 'User-Agent': 'fix11y-worker-keepalive' },
+      });
+      if (res.ok) {
+        logger.log('info', `Keep-alive ping to ${pingUrl} succeeded (status ${res.status})`);
+      } else {
+        logger.log('warn', `Keep-alive ping to ${pingUrl} returned status ${res.status}`);
+      }
+    } catch (err: any) {
+      logger.log('warn', `Keep-alive ping to ${pingUrl} failed: ${err.message}`);
+    }
+  }, intervalMs);
+
+  timer.unref();
+  return timer;
+}
+
+/**
  * Standalone worker execution runner with graceful shutdown.
  */
 export async function runStandaloneWorker(): Promise<void> {
@@ -126,6 +192,14 @@ export async function runStandaloneWorker(): Promise<void> {
 
   logger.log('info', `Configuration loaded: GEMINI_API_KEY=${hasGemini ? '[Configured]' : '[Missing]'}, E2B Sandbox=${hasE2B ? '[Configured]' : '[Missing]'}, Redis=${sanitizedRedis}`);
 
+  // 1. Start lightweight HTTP health check server for Render port detection
+  const port = Number(process.env.PORT) || 10000;
+  const httpServer = createHealthCheckServer(port, logger);
+
+  // 2. Setup Render keep-alive self-ping
+  const keepAliveTimer = setupKeepAlive(process.env.RENDER_EXTERNAL_URL, logger);
+
+  // 3. Connect to Redis and BullMQ
   const connection = createRedisConnection();
   const worker = createRemediationWorker({ connection, logger });
 
@@ -136,10 +210,13 @@ export async function runStandaloneWorker(): Promise<void> {
     isShuttingDown = true;
 
     logger.log('warn', `Received ${signal}, initiating graceful worker shutdown...`);
+    if (keepAliveTimer) clearInterval(keepAliveTimer);
+
     try {
+      await new Promise<void>((resolve) => httpServer.close(() => resolve()));
       await worker.close();
       await connection.quit();
-      logger.log('success', 'Worker and Redis connection closed cleanly.');
+      logger.log('success', 'Health check server, worker, and Redis connection closed cleanly.');
       process.exit(0);
     } catch (err: any) {
       logger.log('error', `Error during worker shutdown: ${err?.message || err}`);
