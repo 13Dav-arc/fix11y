@@ -8,6 +8,7 @@
     "apps/*"
   ],
   "scripts": {
+    "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "test:core": "npm test --workspace=@fix11y/core"
   },

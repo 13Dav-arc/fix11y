@@ -5,7 +5,7 @@ const repoName = 'fix11y';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@fix11y/core'],
-  output: 'export',
+  output: process.env.NEXT_EXPORT === 'true' ? 'export' : undefined,
   basePath: isCI ? `/${repoName}` : '',
   assetPrefix: isCI ? `/${repoName}/` : '',
   images: {

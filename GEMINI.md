@@ -29,6 +29,23 @@
   - Active `aria-live="polite"` live status announcer for asynchronous scan results.
   - High-contrast visual tokens (minimum 4.5:1 text contrast) and visible focus rings.
 
+### Invariant 6: No Full-File LLM Reserialization (`apps/agent`)
+* **Strict CST Surgical Patching**: The LLM must NEVER output or rewrite full file contents. All remediations are produced as localized replacement chunks and applied exclusively via `@fix11y/core`'s CST patcher (`applyPatches`).
+* **Preservation Guarantee**: Untouched code, template directives, comments, and quotation styles are mathematically guaranteed to remain 100% intact.
+
+### Invariant 7: Atomic In-Memory CST Re-Parsing (`apps/agent`)
+* **Offset Drift Prevention**: When a file has multiple violations, each patch is applied sequentially. Between patches, the file content is re-parsed in memory to regenerate fresh, accurate character offsets.
+* **Zero Offset Drift**: Never apply subsequent patches using stale character offsets.
+
+### Invariant 8: E2B MicroVM Sandbox Isolation & Zero Secrets in Sandbox (`apps/agent`)
+* **Air-Gapped Credentials**: Untrusted target repository code is cloned and verified exclusively inside an isolated E2B microVM.
+* **No Host Leaks**: Host environment variables, GitHub App private keys, and LLM API keys are NEVER mounted or passed into the microVM container.
+* **Egress-Only Filtering**: MicroVM sandboxes permit outbound package installations (npm, yarn) while blocking RFC1918 private network ranges to prevent SSRF.
+
+### Invariant 9: Accessible Human-Agent Interface (`apps/agent`)
+* **Screen-Reader & Non-TTY Friendliness**: The CLI orchestrator must support `--accessible` (and `--no-color`) modes.
+* **Flat Milestone Streams**: When accessible mode is active, dynamic spinners, ANSI cursor movement, and `\r` carriage return rewrites are strictly suppressed in favor of line-buffered semantic milestone logs (`[START]`, `[INFO]`, `[SUCCESS]`, `[WARNING]`, `[ERROR]`, `[RETRY]`).
+
 ---
 
 ## 2. Monorepo Directory Architecture
@@ -47,15 +64,24 @@ fix11y/
 │       ├── tests/            # 37/37 native Node test suite & fixtures
 │       └── package.json      # name: "@fix11y/core" (0 dependencies)
 ├── apps/
-│   └── studio/               # Web Playground & Visual Remediation Studio
+│   ├── studio/               # Web Playground & Visual Remediation Studio
+│   │   ├── src/
+│   │   │   ├── app/          # Next.js App Router (page, layout, globals.css)
+│   │   │   ├── components/   # Split Editor, Diff Viewer, Diagnostic Drawer
+│   │   │   └── hooks/        # useFix11y client-side engine hook
+│   │   ├── package.json      # Next.js, React, Tailwind CSS
+│   │   └── next.config.mjs   # transpilePackages: ['@fix11y/core']
+│   └── agent/                # Autonomous Accessibility Engineer (@fix11y/agent)
 │       ├── src/
-│       │   ├── app/          # Next.js App Router (page, layout, globals.css)
-│       │   ├── components/   # Split Editor, Diff Viewer, Diagnostic Drawer
-│       │   └── hooks/        # useFix11y client-side engine hook
-│       ├── package.json      # Next.js, React, Tailwind CSS
-│       └── next.config.mjs   # transpilePackages: ['@fix11y/core']
+│       │   ├── cli/          # Accessible CLI logger & runner
+│       │   ├── webhook/      # Asynchronous GitHub webhook router & BullMQ queue
+│       │   ├── worker.ts     # BullMQ background job consumer with graceful shutdown
+│       │   └── index.ts      # Public programmatic API
+│       ├── tests/            # Phase 1 unit test suite (AccessibleLogger, Webhook)
+│       ├── tsconfig.json     # Strict TypeScript configuration (NodeNext)
+│       └── package.json      # LangGraph, Google Gemini, E2B, BullMQ, ioredis
 ├── GEMINI.md                 # Monorepo governance & operating invariants
-├── README.md                 # CLI & Web Studio documentation
+├── README.md                 # CLI, Web Studio & Autonomous Agent documentation
 └── package.json              # Monorepo workspaces root
 ```
 

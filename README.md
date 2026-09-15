@@ -10,12 +10,13 @@
 
 ---
 
-## 🌟 Dual-Interface Architecture
+## 🌟 Tri-Interface Architecture
 
-`fix11y` operates seamlessly across two distinct developer interfaces:
+`fix11y` operates seamlessly across three developer-first interfaces:
 
-1. **`@fix11y/core` (Zero-Dependency CLI & CI Gate)**: A high-speed terminal utility and programmatic API built strictly with standard Node.js libraries (0 runtime and 0 dev dependencies).
-2. **`fix11y-studio` (Visual Web Playground)**: An accessible, client-side Next.js web application with drag-and-drop template ingestion, live split-pane editors, interactive Myers diffs, and 1-click batch ZIP export.
+1. **`@fix11y/core` (Zero-Dependency CLI & CI Gate)**: High-speed terminal utility and programmatic API built strictly with native Node.js libraries (0 runtime and 0 dev dependencies).
+2. **`fix11y-studio` (Visual Web Playground)**: Accessible, client-side Next.js web application with drag-and-drop template ingestion, live split-pane editors, interactive Myers diffs, and 1-click batch ZIP export.
+3. **`@fix11y/agent` (Autonomous Accessibility Engineer)**: Agentic workflow orchestrator combining LangGraph, isolated E2B microVM sandboxes, GitHub webhook ingestion, and BullMQ task queues to autonomously audit, surgically remediate, verify builds, and open pull requests.
 
 ```mermaid
 flowchart TD
@@ -37,6 +38,14 @@ flowchart TD
             Drawer["WCAG Diagnostics Drawer"]
             Zip["1-Click Batch ZIP Export"]
         end
+
+        subgraph apps/agent ["apps/agent (@fix11y/agent)"]
+            Webhook["GitHub Webhook Ingestion<br/>(HMAC-SHA256, HTTP 202)"]
+            Queue["BullMQ / Redis Task Queue<br/>(Deduplication Key)"]
+            Worker["Remediation Worker<br/>(Graceful Shutdown)"]
+            Sandbox["E2B MicroVM Sandbox<br/>(Egress-Only Isolation)"]
+            A11yLog["Accessible Logger<br/>(--accessible, Screen-Reader Ready)"]
+        end
     end
 
     CLI --> Tokenizer --> Parser --> Registry --> Patcher --> Myers
@@ -47,6 +56,12 @@ flowchart TD
     DiffView --> Next
     Drawer --> Next
     Zip --> Next
+
+    Webhook -->|Enqueue < 50ms| Queue
+    Queue --> Worker
+    Worker --> A11yLog
+    Worker --> Sandbox
+    Sandbox -->|Run Core Engine| Registry
 ```
 
 ---
@@ -130,6 +145,24 @@ npm run build --workspace=fix11y-studio
 
 ---
 
+## 🤖 Autonomous Agent (`@fix11y/agent`)
+
+The Autonomous Accessibility Engineer acts as a tireless, automated team member that scans incoming pull requests, audits repositories inside isolated microVMs, generates surgical CST fixes, runs verification builds, and submits pull requests:
+
+* **♿ Accessible CLI Logging**: Full screen-reader and Section 508 support via `--accessible` and `--no-color` flags. Suppresses animated spinners and carriage return (`\r`) line overwrites to provide flat, line-buffered milestone logs for speech synthesizers (NVDA, JAWS, VoiceOver).
+* **⚡ Decoupled Asynchronous Webhook Queue**: GitHub webhook endpoint verifies HMAC-SHA256 signatures in constant time and enqueues jobs to a BullMQ/Redis queue within 50ms, returning `HTTP 202 Accepted` to guarantee immunity against GitHub's 10-second timeout trap.
+* **🔒 E2B MicroVM Sandbox Isolation**: All untrusted target repository code, dependency installation, and build verifications run inside disposable E2B microVMs with egress filtering (package registries allowed, private RFC1918 host networks blocked). No host API keys or GitHub tokens are ever mounted inside the sandbox.
+* **🎯 CST Surgical Patch Guarantees**: Remediations strictly use `@fix11y/core` character offset patches (`applyPatches`), ensuring LLMs never rewrite or reserialize whole files.
+
+### Starting the Background Remediation Worker
+
+```bash
+# Start the BullMQ remediation worker
+npm run start:worker --workspace=@fix11y/agent
+```
+
+---
+
 ## 🛡️ WCAG 2.1 / 2.2 AA Rule Registry
 
 | Rule ID | WCAG Criteria | Severity | Safety Tier | Automated Surgical Remediation |
@@ -157,13 +190,22 @@ fix11y/
 │       ├── tests/            # 37/37 native Node.js test suite & raw fixtures
 │       └── package.json      # name: "@fix11y/core" (0 dependencies)
 ├── apps/
-│   └── studio/               # Web Playground & Visual Remediation Studio
+│   ├── studio/               # Web Playground & Visual Remediation Studio
+│   │   ├── src/
+│   │   │   ├── app/          # Next.js App Router (page.jsx, layout.jsx, globals.css)
+│   │   │   ├── components/   # EditorPane, DiffViewer, DiagnosticList, FileUploader, Toolbar
+│   │   │   └── hooks/        # useFix11y client-side engine hook
+│   │   ├── package.json      # Next.js, React, Tailwind CSS, JSZip
+│   │   └── next.config.mjs   # transpilePackages: ['@fix11y/core'], output: 'export'
+│   └── agent/                # Autonomous Accessibility Engineer (@fix11y/agent)
 │       ├── src/
-│       │   ├── app/          # Next.js App Router (page.jsx, layout.jsx, globals.css)
-│       │   ├── components/   # EditorPane, DiffViewer, DiagnosticList, FileUploader, Toolbar
-│       │   └── hooks/        # useFix11y client-side engine hook
-│       ├── package.json      # Next.js, React, Tailwind CSS, JSZip
-│       └── next.config.mjs   # transpilePackages: ['@fix11y/core'], output: 'export'
+│       │   ├── cli/          # Accessible CLI logger (--accessible, --no-color)
+│       │   ├── webhook/      # HMAC-SHA256 GitHub webhook handler & BullMQ queue
+│       │   ├── worker.ts     # Standalone background worker with graceful shutdown
+│       │   └── index.ts      # Public programmatic API
+│       ├── tests/            # AccessibleLogger & Webhook unit test suite
+│       ├── tsconfig.json     # Strict TypeScript configuration
+│       └── package.json      # LangGraph, Google Gemini, E2B, BullMQ, ioredis
 ├── GEMINI.md                 # Monorepo governance & operating invariants
 ├── README.md                 # Documentation & Architecture guide
 └── package.json              # Monorepo workspaces root
@@ -181,6 +223,9 @@ npm test
 
 # Run core engine tests specifically
 npm test --workspace=@fix11y/core
+
+# Run autonomous agent tests specifically
+npm test --workspace=@fix11y/agent
 ```
 
 ---

@@ -12,3 +12,15 @@ coverage/
 out/
 build/
 .vercel/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Checkpointer databases
+*.checkpoints*.db
+*.checkpoints*.db-journal
+*.checkpoints*.db-wal
+*.checkpoints*.db-shm
