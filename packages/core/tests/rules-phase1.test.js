@@ -132,7 +132,7 @@ test('MetaViewportRule: accessible viewport produces no violations', () => {
 // 4. duplicate-id Tests (WCAG 4.1.2, caution)
 // ---------------------------------------------------------------------------
 
-test('DuplicateIdRule: detects duplicate IDs, maps to WCAG 4.1.2, and deduplicates', () => {
+test('DuplicateIdRule: detects duplicate IDs, maps to WCAG 4.1.2, and withholds auto-patches', () => {
   const raw = `<section id="hero">First</section><div id="hero">Second</div><p id="hero">Third</p>`;
   const cst = parse(raw);
   const rule = new DuplicateIdRule();
@@ -143,13 +143,11 @@ test('DuplicateIdRule: detects duplicate IDs, maps to WCAG 4.1.2, and deduplicat
   assert.equal(diagnostics[0].ruleId, 'duplicate-id');
   assert.equal(diagnostics[0].wcag[0], '4.1.2');
   assert.equal(diagnostics[0].safety, 'caution');
+  assert.match(diagnostics[0].message, /Automatic patch withheld to prevent breaking CSS, JavaScript, or anchor references/);
 
+  // Detection-only: no automatic rename patches
   const patches = diagnostics.flatMap(d => d.patches);
-  const fixed = applyPatches(raw, patches);
-
-  assert.match(fixed, /<section id="hero">/);
-  assert.match(fixed, /<div id="hero-2">/);
-  assert.match(fixed, /<p id="hero-3">/);
+  assert.equal(patches.length, 0);
 });
 
 // ---------------------------------------------------------------------------

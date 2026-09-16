@@ -5,7 +5,6 @@
 
 import { BaseRule } from './base.js';
 import { findNodes, hasAttribute, getAttributeValue } from '../parser/parser.js';
-import { createUpdateAttributePatch } from '../parser/patcher.js';
 
 export class DuplicateIdRule extends BaseRule {
   constructor() {
@@ -13,7 +12,7 @@ export class DuplicateIdRule extends BaseRule {
       id: 'duplicate-id',
       wcag: '4.1.2',
       description: 'Element id attributes within a file must be unique.',
-      plainLanguage: 'Duplicate id attributes cause screen readers and aria-labelledby/for references to bind to the wrong element.',
+      plainLanguage: 'Duplicate id attributes cause screen readers and aria-labelledby/for references to bind to the wrong element. Automatic patching is withheld to prevent breaking CSS, JavaScript, or anchor references; resolve duplicate IDs manually.',
       scope: 'element',
       severity: 'error',
       safety: 'caution'
@@ -45,22 +44,13 @@ export class DuplicateIdRule extends BaseRule {
         // First occurrence is kept; subsequent duplicates are flagged
         for (let i = 1; i < nodes.length; i++) {
           const duplicateNode = nodes[i];
-          const newId = `${idVal}-${i + 1}`;
-
-          const patch = createUpdateAttributePatch(
-            duplicateNode,
-            'id',
-            newId,
-            null,
-            `Deduplicate id="${idVal}" to id="${newId}" (verify CSS/JS references)`
-          );
 
           diagnostics.push(
             this.createDiagnostic({
-              message: `Duplicate id="${idVal}" detected. Every element id must be unique within the document.`,
+              message: `Duplicate id="${idVal}" detected. Every element id must be unique within the document. Automatic patch withheld to prevent breaking CSS, JavaScript, or anchor references; resolve the duplicate ID and its corresponding references manually.`,
               node: duplicateNode,
               safety: 'caution',
-              patches: [patch]
+              patches: []
             })
           );
         }
