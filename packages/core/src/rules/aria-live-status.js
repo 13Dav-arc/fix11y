@@ -25,6 +25,8 @@ export class AriaLiveStatusRule extends BaseRule {
       id: 'aria-live-status',
       wcag: '4.1.3',
       description: 'Dynamic feedback, status, or search result regions must specify aria-live="polite".',
+      plainLanguage: 'Dynamic content changes without page reloads must be announced to assistive tech using live regions.',
+      scope: 'element',
       severity: 'warning',
       safety: 'safe'
     });

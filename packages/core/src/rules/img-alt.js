@@ -13,6 +13,8 @@ export class ImgAltRule extends BaseRule {
       id: 'img-alt',
       wcag: '1.1.1',
       description: '<img> elements must have an alt attribute to convey meaning or alt="" if decorative.',
+      plainLanguage: 'Images without alt text are invisible to screen reader users; they just hear "image" with no context.',
+      scope: 'element',
       severity: 'error',
       safety: 'safe'
     });

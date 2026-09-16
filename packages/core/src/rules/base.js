@@ -9,16 +9,28 @@ export class BaseRule {
    * @param {string} meta.id - Unique rule identifier (e.g. 'img-alt')
    * @param {string|string[]} meta.wcag - Associated WCAG Success Criteria (e.g. '1.1.1')
    * @param {string} meta.description - Human-readable description of violation
-   * @param {'error'|'warning'} [meta.severity='error'] - Severity level
+   * @param {string} [meta.plainLanguage] - Plain-language educational explanation
+   * @param {'element'|'document'} [meta.scope='element'] - Evaluation scope
+   * @param {'error'|'warning'} [meta.severity='error'] - Severity level (consumed by reporters)
    * @param {'safe'|'caution'} [meta.safety='safe'] - Remediation safety tier
    */
-  constructor({ id, wcag, description, severity = 'error', safety = 'safe' }) {
+  constructor({
+    id,
+    wcag,
+    description,
+    plainLanguage = '',
+    scope = 'element',
+    severity = 'error',
+    safety = 'safe'
+  }) {
     if (!id || typeof id !== 'string') {
       throw new TypeError('Rule ID must be a non-empty string');
     }
     this.id = id;
     this.wcag = Array.isArray(wcag) ? wcag : [wcag];
     this.description = description;
+    this.plainLanguage = plainLanguage || description;
+    this.scope = scope;
     this.severity = severity;
     this.safety = safety;
   }
@@ -41,13 +53,25 @@ export class BaseRule {
    * @param {Array<object>} [params.patches=[]]
    * @param {'error'|'warning'} [params.severity]
    * @param {'safe'|'caution'} [params.safety]
+   * @param {string} [params.plainLanguage]
+   * @param {'element'|'document'} [params.scope]
    * @returns {object}
    */
-  createDiagnostic({ message, node, patches = [], severity = this.severity, safety = this.safety }) {
+  createDiagnostic({
+    message,
+    node,
+    patches = [],
+    severity = this.severity,
+    safety = this.safety,
+    plainLanguage = this.plainLanguage,
+    scope = this.scope
+  }) {
     return {
       ruleId: this.id,
       wcag: this.wcag,
       message,
+      plainLanguage,
+      scope,
       severity,
       safety,
       node,

@@ -8,6 +8,7 @@ import {
   getElementsByTagName,
   hasAttribute,
   getAttributeValue,
+  getTextContent,
   findNodes
 } from '../parser/parser.js';
 import { createInsertAttributePatch } from '../parser/patcher.js';
@@ -20,8 +21,10 @@ export class FormLabelRule extends BaseRule {
       id: 'form-label',
       wcag: ['1.3.1', '4.1.2'],
       description: 'Form controls (<input>, <select>, <textarea>) must have an accessible label.',
+      plainLanguage: 'Form inputs require an associated <label> or aria-label so screen readers announce their purpose.',
+      scope: 'element',
       severity: 'error',
-      safety: 'safe'
+      safety: 'caution'
     });
   }
 
@@ -91,6 +94,85 @@ export class FormLabelRule extends BaseRule {
   }
 
   /**
+   * Identifies an unlinked label that is in physical or semantic proximity to the control.
+   * @param {object} control
+   * @param {Array<object>} availableLabels
+   * @returns {object|null}
+   */
+  findProximityLabel(control, availableLabels) {
+    if (!availableLabels.length || !control.parent) return null;
+
+    const availableSet = new Set(availableLabels);
+    const siblings = control.parent.children || [];
+    const controlIndex = siblings.indexOf(control);
+
+    // 1. Immediate sibling check (preceding non-whitespace element)
+    if (controlIndex !== -1) {
+      for (let i = controlIndex - 1; i >= 0; i--) {
+        const sib = siblings[i];
+        if (sib.type === 'element') {
+          if (availableSet.has(sib)) {
+            return sib;
+          }
+          break;
+        }
+      }
+
+      // Check following sibling (especially for checkbox/radio)
+      for (let i = controlIndex + 1; i < siblings.length; i++) {
+        const sib = siblings[i];
+        if (sib.type === 'element') {
+          if (availableSet.has(sib)) {
+            return sib;
+          }
+          break;
+        }
+      }
+    }
+
+    // 2. Enclosing container check (if single unlinked label in container)
+    let container = control.parent;
+    const CONTAINER_TAGS = new Set(['div', 'p', 'li', 'fieldset', 'section', 'td', 'th']);
+    if (container && CONTAINER_TAGS.has(container.tagName)) {
+      const containerLabels = findNodes(container, (n) => availableSet.has(n));
+      if (containerLabels.length === 1) {
+        return containerLabels[0];
+      }
+    }
+
+    // 3. Semantic attribute correlation
+    const name = (getAttributeValue(control, 'name') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const placeholder = (getAttributeValue(control, 'placeholder') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (name || placeholder) {
+      let bestMatch = null;
+      let minDistance = Infinity;
+
+      for (const label of availableLabels) {
+        const labelText = getTextContent(label).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!labelText) continue;
+
+        const matchesName = name && (labelText.includes(name) || name.includes(labelText));
+        const matchesPlaceholder = placeholder && (labelText.includes(placeholder) || placeholder.includes(labelText));
+
+        if (matchesName || matchesPlaceholder) {
+          const dist = Math.abs(label.startOffset - control.startOffset);
+          if (dist < minDistance && dist < 1000) {
+            minDistance = dist;
+            bestMatch = label;
+          }
+        }
+      }
+
+      if (bestMatch) {
+        return bestMatch;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * @param {object} cst
    * @param {object} [context]
    * @returns {Array<object>}
@@ -131,7 +213,7 @@ export class FormLabelRule extends BaseRule {
     });
 
     let autoIndex = 1;
-    let labelCursor = 0;
+    let remainingLabels = [...unlinkedLabels];
 
     for (const control of formControls) {
       // Check 1: aria-label or aria-labelledby
@@ -153,9 +235,13 @@ export class FormLabelRule extends BaseRule {
       // Violation detected! Construct patches
       const patches = [];
 
-      // Check if there is an unlinked <label> we can pair with
-      if (labelCursor < unlinkedLabels.length) {
-        const targetLabel = unlinkedLabels[labelCursor++];
+      // Proximity pairing check
+      const targetLabel = this.findProximityLabel(control, remainingLabels);
+
+      if (targetLabel) {
+        const idx = remainingLabels.indexOf(targetLabel);
+        if (idx !== -1) remainingLabels.splice(idx, 1);
+
         let finalId = idVal ? idVal.trim() : this.generateDeterministicId(control, autoIndex++);
 
         if (!idVal) {
@@ -180,7 +266,7 @@ export class FormLabelRule extends BaseRule {
           )
         );
       } else {
-        // No unlinked label available: Inject aria-label for direct accessible name
+        // No proximity label available: Inject aria-label for direct accessible name
         const ariaLabelText = this.deriveAriaLabel(control);
         patches.push(
           createInsertAttributePatch(

@@ -24,6 +24,8 @@ export class ButtonSemanticsRule extends BaseRule {
       id: 'button-semantics',
       wcag: ['2.1.1', '4.1.2'],
       description: 'Interactive click triggers must be semantic <button> elements with an accessible name.',
+      plainLanguage: 'Clickable divs and spans are invisible to keyboard navigation and screen readers; real <button> elements provide native focus and activation.',
+      scope: 'element',
       severity: 'error',
       safety: 'caution'
     });
