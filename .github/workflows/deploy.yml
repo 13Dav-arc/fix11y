@@ -19,9 +19,23 @@ concurrency:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    env:
+      FIX11Y_REQUIRE_SIBLINGS: 'true'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Checkout fix11y-runner (Core Sync Verification)
+        uses: actions/checkout@v4
+        with:
+          repository: 13Dav-arc/fix11y-runner
+          path: fix11y-runner
+
+      - name: Checkout fix11y-action (Core Sync Verification)
+        uses: actions/checkout@v4
+        with:
+          repository: 13Dav-arc/fix11y-action
+          path: fix11y-action
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4

@@ -6,26 +6,18 @@ import { execSync } from 'node:child_process';
 const ROOT = process.cwd();
 const SOURCE_DIR = path.resolve(ROOT, 'packages/core/src');
 
-function resolveTarget(dirCandidates) {
-  for (const cand of dirCandidates) {
-    if (cand && fs.existsSync(cand)) {
+/**
+ * Resolves target directory from candidate paths without throwing on undefined.
+ */
+export function resolveTarget(dirCandidates = []) {
+  const valid = dirCandidates.filter(Boolean);
+  for (const cand of valid) {
+    if (fs.existsSync(cand)) {
       return path.resolve(cand);
     }
   }
-  return path.resolve(dirCandidates[0]);
+  return valid.length > 0 ? path.resolve(valid[0]) : null;
 }
-
-const RUNNER_CORE_DIR = resolveTarget([
-  process.env.FIX11Y_RUNNER_DIR,
-  path.resolve(ROOT, 'fix11y-runner/src/core'),
-  path.resolve(ROOT, '../fix11y-runner/src/core'),
-]);
-
-const ACTION_CORE_DIR = resolveTarget([
-  process.env.FIX11Y_ACTION_DIR,
-  path.resolve(ROOT, 'fix11y-action/src/core'),
-  path.resolve(ROOT, '../fix11y-action/src/core'),
-]);
 
 /**
  * Computes SHA-256 hash of a file.
@@ -99,11 +91,28 @@ function copyDirSync(src, dest) {
   }
 }
 
+/**
+ * Main synchronizer / verifier function.
+ */
 export function syncCore(options = {}) {
   const checkOnly = options.check || process.argv.includes('--check');
-  const targets = [
-    { name: 'fix11y-runner', dir: RUNNER_CORE_DIR },
-    { name: 'fix11y-action', dir: ACTION_CORE_DIR },
+  const requireSiblings = options.requireSiblings ?? (process.env.FIX11Y_REQUIRE_SIBLINGS === 'true');
+
+  const runnerDir = options.runnerDir ?? resolveTarget([
+    process.env.FIX11Y_RUNNER_DIR,
+    path.resolve(ROOT, 'fix11y-runner/src/core'),
+    path.resolve(ROOT, '../fix11y-runner/src/core'),
+  ]);
+
+  const actionDir = options.actionDir ?? resolveTarget([
+    process.env.FIX11Y_ACTION_DIR,
+    path.resolve(ROOT, 'fix11y-action/src/core'),
+    path.resolve(ROOT, '../fix11y-action/src/core'),
+  ]);
+
+  const targets = options.targets || [
+    { name: 'fix11y-runner', dir: runnerDir },
+    { name: 'fix11y-action', dir: actionDir },
   ];
 
   if (!fs.existsSync(SOURCE_DIR)) {
@@ -115,14 +124,20 @@ export function syncCore(options = {}) {
 
   let hasDivergence = false;
   const divergences = [];
+  let checkedCount = 0;
 
   for (const target of targets) {
-    if (!fs.existsSync(target.dir)) {
-      hasDivergence = true;
-      divergences.push(`${target.name}: directory does not exist at ${target.dir}`);
+    if (!target.dir || !fs.existsSync(target.dir)) {
+      if (requireSiblings) {
+        hasDivergence = true;
+        divergences.push(`${target.name}: directory does not exist at ${target.dir || 'unresolved'}`);
+      } else {
+        console.log(`[INFO] Sibling repo ${target.name} not found (${target.dir || 'unresolved'}) — skipping core sync check in local dev.`);
+      }
       continue;
     }
 
+    checkedCount++;
     const targetHashes = getDirectoryHashMap(target.dir);
     const targetTreeHash = computeTreeHash(targetHashes);
 
@@ -147,8 +162,14 @@ export function syncCore(options = {}) {
       console.error('\nRun "npm run sync:core" from the monorepo root to synchronize all copies.');
       return { success: false, divergences };
     }
+
+    if (checkedCount === 0) {
+      console.log('[INFO] No sibling repos found — core sync check skipped.');
+      return { success: true, skipped: true, treeHash: sourceTreeHash };
+    }
+
     console.log('[SUCCESS] All vendored core copies are identical to packages/core/src.');
-    return { success: true, treeHash: sourceTreeHash };
+    return { success: true, treeHash: sourceTreeHash, checkedCount };
   }
 
   // Sync mode: copy and generate manifest
@@ -162,6 +183,10 @@ export function syncCore(options = {}) {
   };
 
   for (const target of targets) {
+    if (!target.dir) {
+      console.warn(`[WARNING] Skipping sync for ${target.name} — unresolved path.`);
+      continue;
+    }
     console.log(`[INFO] Syncing to ${target.name} (${target.dir})...`);
     copyDirSync(SOURCE_DIR, target.dir);
     fs.writeFileSync(
