@@ -1,13 +1,22 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import axe from 'axe-core';
 
 describe('Phase 5 — Milestone 5.5: Automated Accessibility DOM Audit (WCAG 2.2 AA Dogfooding)', () => {
   const appBuildDir = fileURLToPath(new URL('../.next/server/app', import.meta.url));
+
+  before(() => {
+    if (!fs.existsSync(appBuildDir)) {
+      console.log('[INFO] Prerendered HTML not found at ' + appBuildDir + ' — executing next build...');
+      const studioDir = fileURLToPath(new URL('..', import.meta.url));
+      execSync('npx next build', { cwd: studioDir, stdio: 'inherit' });
+    }
+  });
 
   const routesToAudit = [
     { name: 'Root / Playground (/)', file: 'index.html' },

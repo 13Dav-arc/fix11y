@@ -46,8 +46,8 @@ jobs:
       - name: Install Monorepo Dependencies
         run: npm ci
 
-      - name: Run Monorepo Quality Gate Tests
-        run: npm test
-
       - name: Build and Typecheck All Workspaces
         run: npm run build
+
+      - name: Run Monorepo Quality Gate Tests
+        run: npm test
