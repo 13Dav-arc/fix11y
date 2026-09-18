@@ -9,8 +9,10 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm test --workspaces --if-present",
-    "test:core": "npm test --workspace=@fix11y/core"
+    "test": "npm run check:core-sync && npm test --workspaces --if-present",
+    "test:core": "npm test --workspace=@fix11y/core",
+    "sync:core": "node scripts/sync-core.js",
+    "check:core-sync": "node scripts/sync-core.js --check"
   },
   "engines": {
     "node": ">=22.5.0"
