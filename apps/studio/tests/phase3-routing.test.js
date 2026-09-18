@@ -174,6 +174,62 @@ describe('Phase 3: Serverless API Layer & Repository Routing', () => {
       assert.equal(rateRes.allowed, false);
       assert.equal(rateRes.remaining, 0);
     });
+
+    it('safely fails open with degraded: true when ALERT_WEBHOOK_URL is unset (no fetch, no error)', async () => {
+      const mockFetch = async () => {
+        throw new Error('Connection refused');
+      };
+
+      const client = new UpstashClient({
+        url: 'https://mock-redis.upstash.io',
+        token: 'mock-token-xyz',
+        alertWebhookUrl: '', // Explicitly unset
+        fetchFn: mockFetch,
+      });
+
+      const rateRes = await client.checkRateLimit({ key: 'ip-failover', limit: 60 });
+      assert.equal(rateRes.allowed, true);
+      assert.equal(rateRes.degraded, true);
+      assert.equal(client.isDegraded, true);
+    });
+
+    it('dispatches throttled alert webhook when ALERT_WEBHOOK_URL is set and quota is exhausted', async () => {
+      const webhookCalls = [];
+      const mockFetch = async (url, options) => {
+        const urlStr = String(url);
+        if (urlStr.includes('hooks.slack.com')) {
+          webhookCalls.push({ url: urlStr, body: JSON.parse(options.body) });
+          return { ok: true, text: async () => 'OK' };
+        }
+        // Simulate Upstash HTTP 429 quota exhausted
+        return {
+          ok: false,
+          status: 429,
+          text: async () => 'Monthly request quota exhausted',
+        };
+      };
+
+      const client = new UpstashClient({
+        url: 'https://mock-redis.upstash.io',
+        token: 'mock-token-xyz',
+        alertWebhookUrl: 'https://hooks.slack.com/services/test-alert',
+        fetchFn: mockFetch,
+      });
+
+      // First failure: dispatches alert webhook
+      const rateRes1 = await client.checkRateLimit({ key: 'ip-quota', limit: 60 });
+      assert.equal(rateRes1.allowed, true);
+      assert.equal(rateRes1.degraded, true);
+      assert.equal(webhookCalls.length, 1);
+      assert.equal(webhookCalls[0].body.event, 'UPSTASH_RATE_LIMIT_DEGRADED');
+      assert.equal(webhookCalls[0].body.status, 429);
+
+      // Second failure immediately after: throttled (no duplicate webhook)
+      const rateRes2 = await client.checkRateLimit({ key: 'ip-quota', limit: 60 });
+      assert.equal(rateRes2.allowed, true);
+      assert.equal(rateRes2.degraded, true);
+      assert.equal(webhookCalls.length, 1, 'Subsequent alert within 15m must be throttled');
+    });
   });
 
   describe('GitHub App Service & Invariants', () => {
@@ -574,6 +630,8 @@ describe('Phase 3: Serverless API Layer & Repository Routing', () => {
         assert.equal(res.status, 400);
         const data = await res.json();
         assert.equal(data.isPrivate, true);
+        assert.equal(data.workflowUrl, 'https://github.com/private-org/secret-repo/actions/workflows/fix11y-remediate.yml');
+        assert.equal(data.actionsUrl, 'https://github.com/private-org/secret-repo/actions');
         assert.match(data.error, /Private repositories run remediation inside native GitHub Actions/);
       } finally {
         globalThis.fetch = originalFetch;

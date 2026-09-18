@@ -51,6 +51,8 @@ export function AgentTriggerForm({ onTriggerSuccess }) {
           type: 'private_repo',
           message: data.error,
           repo: trimmedRepo,
+          workflowUrl: data.workflowUrl || `https://github.com/${trimmedRepo}/actions`,
+          actionsUrl: data.actionsUrl || `https://github.com/${trimmedRepo}/actions`,
         });
         return;
       }
@@ -209,19 +211,29 @@ export function AgentTriggerForm({ onTriggerSuccess }) {
 
           {/* Actionable CTAs based on error type */}
           {errorInfo.type === 'private_repo' && (
-            <div className="pt-2 border-t border-border flex items-center justify-between">
-              <p className="text-[11px] text-muted">
-                Navigate to your repo&apos;s Actions tab and click &quot;Run workflow&quot; on the fix11y workflow.
+            <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-[11px] text-muted leading-relaxed">
+                Run the workflow directly inside your repository&apos;s GitHub Actions minutes so private code never leaves your account.
               </p>
-              <a
-                href={`https://github.com/${errorInfo.repo}/actions`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-canvas border border-border text-slate-200 hover:text-white font-medium text-[11px]"
-              >
-                <span>Actions Tab</span>
-                <ExternalLink className="w-3 h-3" aria-hidden="true" />
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={errorInfo.actionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-canvas border border-border text-slate-300 hover:text-white font-medium text-xs transition-colors"
+                >
+                  <span>Actions Tab</span>
+                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                </a>
+                <a
+                  href={errorInfo.workflowUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent text-canvas font-semibold text-xs hover:bg-accent/90 transition-all shadow-md shadow-accent/10"
+                >
+                  <span>Open &amp; Run in GitHub Actions ↗</span>
+                </a>
+              </div>
             </div>
           )}
 

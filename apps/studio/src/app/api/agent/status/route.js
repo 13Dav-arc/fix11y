@@ -56,7 +56,7 @@ export async function GET(req) {
     const progress = await upstash.getRunProgress(runId);
 
     if (!progress) {
-      return NextResponse.json(
+      const res = NextResponse.json(
         {
           found: false,
           runId,
@@ -66,9 +66,13 @@ export async function GET(req) {
         },
         { status: 200 }
       );
+      if (rateLimit?.degraded) {
+        res.headers.set('X-RateLimit-Degraded', 'true');
+      }
+      return res;
     }
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         found: true,
         runId,
@@ -76,6 +80,10 @@ export async function GET(req) {
       },
       { status: 200 }
     );
+    if (rateLimit?.degraded) {
+      res.headers.set('X-RateLimit-Degraded', 'true');
+    }
+    return res;
   } catch (error) {
     console.error('[ERROR] Agent status endpoint error:', error);
     return NextResponse.json(

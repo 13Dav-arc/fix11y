@@ -97,8 +97,10 @@ export async function POST(req) {
     if (repoDetails.private) {
       return NextResponse.json(
         {
-          error: 'Private repositories run remediation inside native GitHub Actions (.github/workflows/fix11y.yml). On-demand trigger is supported for public repositories.',
+          error: 'Private repositories run remediation inside native GitHub Actions (.github/workflows/fix11y-remediate.yml). On-demand trigger is supported for public repositories.',
           isPrivate: true,
+          workflowUrl: `https://github.com/${owner}/${repo}/actions/workflows/fix11y-remediate.yml`,
+          actionsUrl: `https://github.com/${owner}/${repo}/actions`,
         },
         { status: 400 }
       );
@@ -177,7 +179,7 @@ export async function POST(req) {
       },
     });
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         message: 'Autonomous remediation scan triggered successfully',
         runId,
@@ -188,6 +190,12 @@ export async function POST(req) {
       },
       { status: 202 }
     );
+
+    if (rateLimit?.degraded) {
+      res.headers.set('X-RateLimit-Degraded', 'true');
+    }
+
+    return res;
   } catch (error) {
     console.error('[ERROR] On-demand trigger error:', error);
     return NextResponse.json(
