@@ -125,6 +125,7 @@ export async function POST(req) {
           message: setupResult.prCreated
             ? 'Setup PR created to install fix11y-action'
             : 'fix11y-action is configured. Private scan runs inside native GitHub Actions.',
+          status: setupResult.prCreated ? 'setup_pr_opened' : 'workflow_present',
           targetVisibility: 'private',
           workflowExists: setupResult.workflowExists,
           prCreated: setupResult.prCreated,

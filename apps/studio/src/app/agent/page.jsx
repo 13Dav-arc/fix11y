@@ -129,9 +129,12 @@ export default function AgentPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-canvas text-muted text-xs">
-          Loading fix11y Agent...
-        </div>
+        <main
+          aria-label="Loading fix11y Agent"
+          className="flex min-h-screen items-center justify-center bg-canvas text-muted text-xs"
+        >
+          <p>Loading fix11y Agent...</p>
+        </main>
       }
     >
       <AgentContent />
