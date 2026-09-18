@@ -24,3 +24,7 @@ build/
 *.checkpoints*.db-journal
 *.checkpoints*.db-wal
 *.checkpoints*.db-shm
+
+# Sibling repos for Phase 2
+fix11y-runner/
+fix11y-action/
