@@ -133,7 +133,7 @@ Go to `/agent` and click **"Install on GitHub."** What happens next depends on w
 ### Watching it work
 After a push, you don't need to go looking for anything — a status check appears directly on your commit (the same place any other CI check shows up), with a live-updating one-line summary like *"Fixing files: 3 of 7."* Click **"Details"** on that check to open a fuller live progress view on `/agent`, with a step-by-step breakdown of exactly what's happening.
 
-You can also trigger a run manually anytime — no need to push a throwaway commit just to see it work. Go to `/agent`, find your repo, and click **"Run Agent now."**
+For public repositories, you can also trigger a run manually anytime — no need to push a throwaway commit just to see it work. Go to `/agent`, find your repo, and click **"Run Agent now."** For private repositories, runs trigger automatically on push or can be triggered manually directly from your repository's GitHub Actions tab (**Run workflow** under the *fix11y Accessibility Remediation* workflow), ensuring your code never leaves your own GitHub Actions environment.
 
 ### Reading the pull request it opens
 Every PR the Agent opens lists what it changed, organized by safety tier:
