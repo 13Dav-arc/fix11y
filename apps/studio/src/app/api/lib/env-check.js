@@ -9,6 +9,7 @@ export function getVercelConfig() {
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
   const runnerRepo = process.env.FIX11Y_RUNNER_REPO || '13Dav-arc/fix11y-runner';
+  const runnerToken = process.env.FIX11Y_RUNNER_TOKEN || null;
   const actionRef = process.env.FIX11Y_ACTION_REF || '5144ef5';
 
   const missing = [];
@@ -28,6 +29,7 @@ export function getVercelConfig() {
       upstashUrl,
       upstashToken,
       runnerRepo,
+      runnerToken,
       actionRef,
     },
   };

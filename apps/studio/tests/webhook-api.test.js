@@ -81,4 +81,51 @@ describe('GitHub Webhook Route Handler (POST /api/webhooks/github)', () => {
     const body = await res.json();
     assert.equal(body.error, 'Internal server error while processing webhook');
   });
+
+  it('returns 200 and ignores push events on fix11y remediation branches', async () => {
+    const rawPayload = JSON.stringify({
+      ref: 'refs/heads/fix11y/remediation-abc1234',
+      repository: { full_name: 'owner/repo' },
+      after: 'abcdef1234567890',
+    });
+    const signature = computeSignature(rawPayload, secret);
+
+    const req = {
+      text: async () => rawPayload,
+      headers: new Headers({
+        'x-hub-signature-256': signature,
+        'x-github-event': 'push',
+        'x-github-delivery': 'del-remediation-branch',
+      }),
+    };
+
+    const res = await postWebhook(req);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.ok(body.message.includes('Ignored fix11y remediation branch push'));
+  });
+
+  it('returns 200 and ignores push events authored by fix11y[bot]', async () => {
+    const rawPayload = JSON.stringify({
+      ref: 'refs/heads/custom-feature',
+      repository: { full_name: 'owner/repo' },
+      sender: { login: 'fix11y[bot]' },
+      after: 'abcdef1234567890',
+    });
+    const signature = computeSignature(rawPayload, secret);
+
+    const req = {
+      text: async () => rawPayload,
+      headers: new Headers({
+        'x-hub-signature-256': signature,
+        'x-github-event': 'push',
+        'x-github-delivery': 'del-bot-push',
+      }),
+    };
+
+    const res = await postWebhook(req);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.ok(body.message.includes('Ignored fix11y remediation branch push'));
+  });
 });

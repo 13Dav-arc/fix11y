@@ -84,6 +84,18 @@ export async function POST(req) {
       );
     }
 
+    // Ignore fix11y remediation branches and bot pushes to prevent recursive loops
+    if (
+      payload.ref?.startsWith('refs/heads/fix11y/') ||
+      payload.head_commit?.committer?.name === 'fix11y[bot]' ||
+      payload.sender?.login?.includes('fix11y')
+    ) {
+      return NextResponse.json(
+        { message: `Ignored fix11y remediation branch push: ${payload.ref}` },
+        { status: 200 }
+      );
+    }
+
     const repoFullName = payload.repository?.full_name;
     const headSha = payload.after || payload.head_commit?.id;
     const installationId = payload.installation?.id;
@@ -158,16 +170,22 @@ export async function POST(req) {
       runId,
     });
 
-    // Obtain runner repo token (if under separate installation, otherwise fallback to targetToken)
+    // Obtain runner repo token (explicit FIX11Y_RUNNER_TOKEN, or via App installation on runner repo)
     const [runnerOwner, runnerRepo] = config.runnerRepo.split('/');
-    let runnerToken = targetToken;
-    try {
-      const runnerInstall = await appService.verifyInstallation(runnerOwner, runnerRepo);
-      if (runnerInstall.installed && runnerInstall.installationId) {
-        runnerToken = await appService.getInstallationToken(runnerInstall.installationId);
+    let runnerToken = config.runnerToken || null;
+    if (!runnerToken) {
+      try {
+        const runnerInstall = await appService.verifyInstallation(runnerOwner, runnerRepo);
+        if (runnerInstall.installed && runnerInstall.installationId) {
+          runnerToken = await appService.getInstallationToken(runnerInstall.installationId);
+        }
+      } catch (err) {
+        console.warn(`[WARNING] Could not obtain installation token for runner repo ${config.runnerRepo}: ${err.message}`);
       }
-    } catch {
-      // Runner is in the same installation or targetToken has access
+    }
+
+    if (!runnerToken) {
+      runnerToken = targetToken;
     }
 
     // Dispatch fix11y-runner workflow DAG via repository_dispatch
