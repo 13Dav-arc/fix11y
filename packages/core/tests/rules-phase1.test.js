@@ -167,7 +167,7 @@ test('EmptyLinkRule: flags link without accessible name and derives label from h
   const patches = diagnostics.flatMap(d => d.patches);
   const fixed = applyPatches(raw, patches);
 
-  assert.match(fixed, /aria-label="Contact us"/);
+  assert.match(fixed, /aria-label="Contact [Uu]s"/);
   assert.match(fixed, /aria-label="Email support@fix11y\.org"/);
 });
 

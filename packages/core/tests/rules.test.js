@@ -22,7 +22,7 @@ function loadFixture(filename) {
   return fs.readFileSync(path.join(__dirname, 'fixtures', filename), 'utf-8');
 }
 
-test('ImgAltRule detects missing alt attributes and injects contextual alt=""', () => {
+test('ImgAltRule detects missing alt attributes and injects contextual alt attributes', () => {
   const raw = loadFixture('img-alt.raw.html');
   const expected = loadFixture('img-alt.fixed.html');
 
@@ -32,7 +32,7 @@ test('ImgAltRule detects missing alt attributes and injects contextual alt=""', 
 
   assert.equal(diagnostics.length, 2);
   assert.equal(diagnostics[0].ruleId, 'img-alt');
-  assert.equal(diagnostics[0].safety, 'safe');
+  assert.equal(diagnostics[0].safety, 'caution'); // meaningful image with derived name
 
   const patches = diagnostics.flatMap(d => d.patches);
   const fixed = applyPatches(raw, patches);
@@ -104,15 +104,15 @@ test('remediate() applies multi-rule fixes to Mustache template losslessly', () 
 });
 
 test('remediate() respects safety level filtering (safe only vs caution)', () => {
-  const source = '<img src="pic.jpg"><div onclick="submit()">Submit</div>';
+  const source = '<img src="spacer.gif" class="spacer"><div onclick="submit()">Submit</div>';
   
-  // Safe only (should fix img, but skip div tag swap)
+  // Safe only (should fix decorative img with alt="", but skip div tag swap)
   const safeOnly = remediate(source, { safetyLevels: ['safe'] });
-  assert.ok(safeOnly.patched.includes('<img src="pic.jpg" alt="">'));
+  assert.ok(safeOnly.patched.includes('<img src="spacer.gif" class="spacer" alt="">'));
   assert.ok(safeOnly.patched.includes('<div onclick="submit()">Submit</div>'));
 
   // All safety levels (should fix both)
   const allLevels = remediate(source, { safetyLevels: ['safe', 'caution'] });
-  assert.ok(allLevels.patched.includes('<img src="pic.jpg" alt="">'));
+  assert.ok(allLevels.patched.includes('<img src="spacer.gif" class="spacer" alt="">'));
   assert.ok(allLevels.patched.includes('<button onclick="submit()"'));
 });
