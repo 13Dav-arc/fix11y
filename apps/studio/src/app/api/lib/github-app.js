@@ -344,3 +344,41 @@ Merge this PR to enable automatic WCAG 2.1/2.2 AA fixes on future pushes.`;
     return { workflowExists: false, prCreated: true, prUrl: prData.html_url };
   }
 }
+
+/**
+ * Resolves the runner repository token enforcing strict precedence:
+ * 1. App-installation token (primary, dynamic RS256)
+ * 2. Static PAT fallback (FIX11Y_RUNNER_TOKEN) if App is not installed on runner repo
+ * 3. Target repo token (last resort)
+ *
+ * @param {Object} params
+ * @param {GitHubAppService} params.appService
+ * @param {string} params.runnerRepo e.g. "13Dav-arc/fix11y-runner"
+ * @param {string|null} [params.staticRunnerToken]
+ * @param {string} params.targetToken
+ * @returns {Promise<string>}
+ */
+export async function resolveRunnerToken({ appService, runnerRepo, staticRunnerToken = null, targetToken }) {
+  const [runnerOwner, runnerRepoName] = runnerRepo.split('/');
+  let runnerToken = null;
+
+  try {
+    const runnerInstall = await appService.verifyInstallation(runnerOwner, runnerRepoName);
+    if (runnerInstall.installed && runnerInstall.installationId) {
+      runnerToken = await appService.getInstallationToken(runnerInstall.installationId);
+    }
+  } catch (err) {
+    console.warn(`[WARNING] Could not obtain App token for runner repo ${runnerRepo}: ${err.message}`);
+  }
+
+  if (!runnerToken && staticRunnerToken) {
+    runnerToken = staticRunnerToken;
+  }
+
+  if (!runnerToken) {
+    runnerToken = targetToken;
+  }
+
+  return runnerToken;
+}
+

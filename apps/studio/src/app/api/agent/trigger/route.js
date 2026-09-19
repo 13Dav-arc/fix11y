@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server.js';
 import { validateVercelEnv } from '../../lib/env-check.js';
 import { UpstashClient } from '../../lib/upstash.js';
-import { GitHubAppService } from '../../lib/github-app.js';
+import { GitHubAppService, resolveRunnerToken } from '../../lib/github-app.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -153,23 +153,13 @@ export async function POST(req) {
       runId,
     });
 
-    // 9. Obtain runner repo token and dispatch runner DAG
-    const [runnerOwner, runnerRepo] = config.runnerRepo.split('/');
-    let runnerToken = config.runnerToken || null;
-    if (!runnerToken) {
-      try {
-        const runnerInstall = await appService.verifyInstallation(runnerOwner, runnerRepo);
-        if (runnerInstall.installed && runnerInstall.installationId) {
-          runnerToken = await appService.getInstallationToken(runnerInstall.installationId);
-        }
-      } catch (err) {
-        console.warn(`[WARNING] Could not obtain installation token for runner repo ${config.runnerRepo}: ${err.message}`);
-      }
-    }
-
-    if (!runnerToken) {
-      runnerToken = targetToken;
-    }
+    // 9. Resolve runner repo token enforcing strict precedence (App token > static PAT > targetToken)
+    const runnerToken = await resolveRunnerToken({
+      appService,
+      runnerRepo: config.runnerRepo,
+      staticRunnerToken: config.runnerToken,
+      targetToken,
+    });
 
     await appService.dispatchRunner({
       runnerRepo: config.runnerRepo,

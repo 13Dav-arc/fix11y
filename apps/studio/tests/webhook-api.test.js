@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { POST as postWebhook } from '../src/app/api/webhooks/github/route.js';
+import { resolveRunnerToken } from '../src/app/api/lib/github-app.js';
 
 function computeSignature(payload, secret) {
   const hmac = crypto.createHmac('sha256', secret);
@@ -128,4 +129,60 @@ describe('GitHub Webhook Route Handler (POST /api/webhooks/github)', () => {
     const body = await res.json();
     assert.ok(body.message.includes('Ignored fix11y remediation branch push'));
   });
+
+  describe('Runner Token Precedence (resolveRunnerToken)', () => {
+    it('App-token-wins-when-both-available: mints dynamic App token even when static PAT is set', async () => {
+      const mockAppService = {
+        verifyInstallation: async (owner, repo) => {
+          assert.equal(owner, '13Dav-arc');
+          assert.equal(repo, 'fix11y-runner');
+          return { installed: true, installationId: 161624851 };
+        },
+        getInstallationToken: async (installId) => {
+          assert.equal(installId, 161624851);
+          return 'ghs_mockAppInstallationToken123';
+        },
+      };
+
+      const token = await resolveRunnerToken({
+        appService: mockAppService,
+        runnerRepo: '13Dav-arc/fix11y-runner',
+        staticRunnerToken: 'ghp_staticPatOverride456',
+        targetToken: 'ghs_targetRepoToken789',
+      });
+
+      assert.equal(token, 'ghs_mockAppInstallationToken123');
+    });
+
+    it('PAT-fallback-when-App-not-installed: falls back to static PAT when App lacks runner access', async () => {
+      const mockAppService = {
+        verifyInstallation: async () => ({ installed: false }),
+      };
+
+      const token = await resolveRunnerToken({
+        appService: mockAppService,
+        runnerRepo: '13Dav-arc/fix11y-runner',
+        staticRunnerToken: 'ghp_staticPatOverride456',
+        targetToken: 'ghs_targetRepoToken789',
+      });
+
+      assert.equal(token, 'ghp_staticPatOverride456');
+    });
+
+    it('target-token-as-last-resort: uses targetToken when neither App nor static PAT are available', async () => {
+      const mockAppService = {
+        verifyInstallation: async () => ({ installed: false }),
+      };
+
+      const token = await resolveRunnerToken({
+        appService: mockAppService,
+        runnerRepo: '13Dav-arc/fix11y-runner',
+        staticRunnerToken: null,
+        targetToken: 'ghs_targetRepoToken789',
+      });
+
+      assert.equal(token, 'ghs_targetRepoToken789');
+    });
+  });
 });
+
