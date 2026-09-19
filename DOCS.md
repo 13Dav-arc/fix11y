@@ -68,6 +68,14 @@ Each rule is tagged with a **safety tier**:
 - **`safe`** — fix11y is confident this fix is correct and won't change the meaning of your page. Fine to auto-apply.
 - **`caution`** — the fix is structurally valid, but you should glance at it, because getting it exactly right sometimes needs context fix11y doesn't have (for example: `alt=""` is the safe default for a decorative image, but if the image is actually meaningful, the *right* alt text is something only you know).
 
+### What it doesn't catch today (scope limitations)
+
+Being honest about boundaries is just as important as knowing what fix11y covers. The v1 engine intentionally defers the following cases to human review:
+
+- **Ambiguous link text with existing content (`<a>click here</a>`, `learn more`):** `empty-link` strictly checks whether an interactive anchor lacks an accessible name (empty text, missing `aria-label`, missing icon title). If a link contains visible text like "click here", it has an accessible name, but fails WCAG 2.4.4 / 2.4.9 (Link Purpose in Context). Evaluating whether visible link text provides sufficient standalone context requires editorial judgment and is deferred in v1.
+- **Images with undetermined intent (`'unknown'` branch):** When an `<img>` tag lacks both decorative signals (e.g. `spacer`, `divider`) and meaningful signals (e.g. `logo`, `diagram`, interactive parent), fix11y refuses to guess. Rather than dangerously converting it to decorative `alt=""` or injecting a generic placeholder like `alt="Image"`, fix11y emits a caution diagnostic with **zero auto-patches**, flagging it for human review.
+- **Whole-document landmark hierarchy in template fragments:** Full-page structural checks (such as single `<main>` landmark or heading level jumps) only execute when scanning complete HTML documents in Studio Playground. They do not run during file-level CI scans on template partials (where headers, sidebars, and footers are assembled by downstream build tools).
+
 ### CLI reference
 
 ```bash
@@ -148,7 +156,7 @@ If a build check fails after a patch is applied, no pull request opens at all �
 ## Frequently asked questions
 
 **Does fix11y catch every accessibility problem on my site?**
-No — and we'd rather tell you that plainly than have you find out the hard way. It catches what's mechanically checkable (see Part 1's rule list). A lot of real accessibility work — is this wording actually clear? does this page make sense read aloud top to bottom? — needs a human, always will. Think of fix11y as clearing out the mechanical issues so you can spend your attention on the judgment calls that actually need it.
+No — and we'd rather tell you that plainly than have you find out the hard way. It catches what's mechanically checkable (see Part 1's rule list and scope limitations, such as ambiguous link phrasing like 'click here' or signal-free images). A lot of real accessibility work — is this wording actually clear? does this page make sense read aloud top to bottom? — needs a human, always will. Think of fix11y as clearing out the mechanical issues so you can spend your attention on the judgment calls that actually need it.
 
 **Does fix11y see my private code?**
 For public repos, yes — that's how it scans and fixes things, same as any CI tool. For private repos, fix11y is specifically designed so that everything stays inside your own repository's own logs and Actions minutes — nothing about a private repo's code is processed anywhere fix11y itself can see it. Playground never sends anything you paste to a server at all.
